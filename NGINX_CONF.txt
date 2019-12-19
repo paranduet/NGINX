@@ -1,0 +1,190 @@
+First we have unzip all zip file using following command:
+----------------- Extract Command in Linux ------------------
+		============================
+ tar -zxvf pcre.tar.gz
+ tar -zxvf zlib-1.2.8.tar.gz
+ tar -zxvf openssl-1.1.0-pre4.tar.gz
+ unzip nginx-goodies-nginx-sticky-module-ng-c78b7dd79d0d.zip 
+ tar -zxvf nginx-1.4.8.tar.gz
+ 
+
+-------------------PCRE Configuration-------------------------
+		  ====================
+Then enter pcre folder directory using cd pcre_folder 
+./configure
+make
+make test
+make install
+
+
+---------------------ZLIB Configuration ----------------------------
+		    =====================
+Then enter pcre folder directory using cd zlib_folder 
+./configure
+make test
+make install
+
+------------------------OPENSSL Configuration -----------------------
+			======================
+Then enter openssl folder directory using cd openssl_folder
+First we have to check config & Configure file, check their permission status. both will be 755(chmod 755 config, Configure)
+ ./config --prefix=/usr --openssldir=/usr/local/openssl shared  [if openssl already exist, it will replace with the previous version]
+make
+make test
+make install
+check version: openssl version
+achieve: http://ftp.nluug.nl/security/openssl/
+
+-------------------------NGINX Configuration ------------------------------------------------------------------------------
+			======================
+Then enter pcre folder directory using cd nginx_folder 
+./configure --with-http_ssl_module	[for openssl enable]
+./configure --with-http_ssl_module  --add-module=/ftp/NGINX/nginx-goodies-nginx-sticky-module-ng [enable openssl and sticky session module]
+make
+make test
+make install
+
+NGINX internal configuration for HTTPS
+---------------------------------------
+#######Generate Keys And Create An SSL Certificate:###########
+# mkdir -p /etc/nginx/ssl/ibbl.bd
+# cd /etc/nginx/ssl/ibbl.bd
+
+######Create an SSL private key: To generate an SSL private key, enter:########
+# openssl genrsa -des3 -out self-ssl.key 2048
+
+++++++++++++++++++ Create a certificate signing request (CSR)++++++++++++++++++++++++
+# openssl req -new -key self-ssl.key -out self-ssl.csr
+
++++++++++++++++ Finally, generate SSL certificate i.e. sign your SSL certificate with your own .csr file for one year: +++++++++++++++++
+# openssl x509 -req -days 365 -in self-ssl.csr -signkey self-ssl.key -out self-ssl.crt
+
+++++++++++++++++++++++++ This Option is for Self Signing +++++++++++++++++++++++ [Where -nodes is specially use for the purpose]
+#openssl req -new -x509 -days 365 -nodes -out self-ssl.crt -keyout self-ssl.key
+
+++++++++++++++++++++++++ How to check Valid date or expiration date ++++++++++++++++++++++++
+openssl x509 -in /etc/nginx/ssl/ibbl.bd/self-ssl.crt  -noout -enddate
+
+
++++++++++++++++++++++++ How to Renew or Extend expiration date ++++++++++++++++++++++
+openssl x509 -req -days 365 -in self-ssl.csr -signkey self-ssl.key -out self-ssl.crt
+
+
+			How to Auto Redirect HTTP to HTTPS in NGINX
+----------------------------------------------------------------------------------------------
+We have to required little bit change in nginx/conf/nginx.conf file, unser server first block;
+
+Add the following code:
+rewrite ^ https://$server_name$request_uri? permanent;
+
+Total code will be as like following:
+ server {
+        listen       80;
+        server_name  192.168.31.204;
+        rewrite ^ https://$server_name$request_uri? permanent;
+
+
+Memcached with relevant
+------------------------------
+libevent from 
+http://libevent.org/
+
+Information About on nginx
+================================
+
+configuration file
+/usr/local/nginx/conf/nginx.conf
+ 
+ process status
+ ps -ef | grep -i nginx
+ 
+fuser 80/tcp -k
+ 
+ start nginx
+cd /usr/local/nginx/sbin
+./nginx
+ 
+ 
+ stop nginx
+ cd /usr/local/nginx/sbin
+ ./nginx  -s stop
+
+
+Nginx Log:
+path:  /usr/local/nginx/logs/
+
+rm -f -R access.log
+
+
+############### How to increase NGINX file size ###############
+Nginx 413 Request Entity Too Large
+
+Solution:
+vi /usr/local/nginx/conf/nginx.conf
+Add following under http,server,location block
+
+http{
+	client_max_body_size 2M;
+}
+server{
+	client_max_body_size 2M;
+}
+ location /investment{
+        proxy_pass http://investment;
+	client_max_body_size 2M;
+}
+
+upstream ablb
+{
+sticky;
+server 192.168.39.211:80;
+server 192.168.39.212:80;
+#server 127.0.1.1:80;
+}
+
+server {
+    listen 127.0.1.1:80;
+    location / {
+        proxy_pass http://192.168.39.212/agentbanking/;
+    }
+}
+
+server
+{
+#       listen  192.168.29.12:80;
+#        listen  *:80;
+        listen 443 ssl;
+        server_name 192.168.29.12;
+        ssl on;
+        #ssl_certificate      /etc/nginx/ssl/ibbl.bd/ibbl-self-ssl.crt;
+        #ssl_certificate_key  /etc/nginx/ssl/ibbl.bd/ibbl-self-ssl.key;
+
+         ssl_certificate      /etc/nginx/ssl/ibbl.bd/Wildcard_islamibankbd_com_public.cer;
+        ssl_certificate_key  /etc/nginx/ssl/ibbl.bd/Wildcard_islamibankbd_com_private.key;
+
+        ssl_session_timeout  4h;
+        ssl_protocols  TLSv1 TLSv1.1 TLSv1.2;
+        ssl_ciphers  HIGH:!aNULL:!MD5;
+        ssl_session_cache    shared:SSL:10m;
+        # force https-redirects
+            if ($scheme = http) {
+                return 301 https://$server_name$request_uri;
+        }
+
+
+location /{
+proxy_pass http://ablb;
+client_max_body_size 10M;
+proxy_set_header Host $host;
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_connect_timeout       1800;
+proxy_send_timeout          1800;
+proxy_read_timeout          1800;
+send_timeout                1800;
+}
+
+}
+
+
+}
