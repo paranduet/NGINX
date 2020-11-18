@@ -1,0 +1,47 @@
+location = /content/unique-page-name {
+  return 301 /new-name/unique-page-name;
+}
+
+Just for Example:
+    upstream partner
+    {
+        sticky;
+        #least_conn;
+        server 192.168.249.10:443;
+    }
+
+    upstream partner-portal
+    {
+        sticky;
+        #least_conn;
+        server 192.168.249.10:443;
+    }
+
+
+        location /partner/{
+            proxy_pass https://partner;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_connect_timeout       1800;
+            proxy_send_timeout          1800;
+            proxy_read_timeout          1800;
+            send_timeout                1800;
+        }
+
+        location /partner-portal/{
+            proxy_pass https://partner-portal;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_connect_timeout       1800;
+            proxy_send_timeout          1800;
+            proxy_read_timeout          1800;
+            send_timeout                1800;
+        }
+
+################# Redirect url, https://192.168.31.204/partner/ to https://192.168.31.204/partner-portal/ ##################
+########## return 301 means permanent redirect ##############
+        location = /partner/ {
+          return 301 /partner-portal/;
+        }
