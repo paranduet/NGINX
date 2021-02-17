@@ -1,0 +1,18 @@
+Problem: (13: Permission denied) while connecting to upstream:[nginx]
+-------------------------------------------------------------------------
+Answer: 
+It turns out my issue was due to SELinux.
+
+May be SELINUX is enabled or Enforcing, do the following command hopefully solve the problem
+Option #1 : If yor are trusted
+>> setsebool -P httpd_can_network_connect 1
+
+Check the following command to see log: 
+>> cat /var/log/audit/audit.log | grep nginx | grep denied
+And found that running the following commands fixed my issue:
+
+>> cat /var/log/audit/audit.log | grep nginx | grep denied | audit2allow -M mynginx
+>>  semodule -i mynginx.pp
+
+Option #2 (untested, but probably more secure)
+setsebool -P httpd_can_network_relay 1
